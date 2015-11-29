@@ -708,6 +708,25 @@ public:
 };
 
 template <typename Target>
+class AveryTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__ELF__");
+    Builder.defineMacro("__AVERY__");
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+  }
+
+public:
+  AveryTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {
+    this->UserLabelPrefix = "";
+  }
+};
+
+template <typename Target>
 class NaClTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
@@ -7909,6 +7928,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
         return new MicrosoftX86_64TargetInfo(Triple);
       }
     }
+    case llvm::Triple::Avery:
+      return new AveryTargetInfo<X86_64TargetInfo>(Triple);
     case llvm::Triple::NaCl:
       return new NaClTargetInfo<X86_64TargetInfo>(Triple);
     case llvm::Triple::PS4:

@@ -8979,6 +8979,129 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
+void averytools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                                      const InputInfo &Output,
+                                      const InputInfoList &Inputs,
+                                      const ArgList &Args,
+                                      const char *LinkingOutput) const {
+
+  const toolchains::Avery &ToolChain =
+      static_cast<const toolchains::Avery &>(getToolChain());
+  const Driver &D = ToolChain.getDriver();
+  const bool IsStatic =
+      !Args.hasArg(options::OPT_dynamic) && !Args.hasArg(options::OPT_shared);
+
+  ArgStringList CmdArgs;
+
+  // Silence warning for "clang -g foo.o -o foo"
+  Args.ClaimAllArgs(options::OPT_g_Group);
+  // and "clang -emit-llvm foo.o -o foo"
+  Args.ClaimAllArgs(options::OPT_emit_llvm);
+  // and for "clang -w foo.o -o foo". Other warning options are already
+  // handled somewhere else.
+  Args.ClaimAllArgs(options::OPT_w);
+
+  CmdArgs.push_back(Args.MakeArgString("--sysroot=" + ToolChain.SysRoot));
+
+  if (Args.hasArg(options::OPT_rdynamic))
+    CmdArgs.push_back("-export-dynamic");
+
+  if (Args.hasArg(options::OPT_s))
+    CmdArgs.push_back("-s");
+
+  // Avery doesn't have ExtraOpts like Linux; the only relevant flag
+  // from there is --build-id, which we do want.
+  CmdArgs.push_back("--build-id");
+
+  if (!IsStatic)
+    CmdArgs.push_back("--eh-frame-hdr");
+
+  if (IsStatic)
+    CmdArgs.push_back("-static");
+  else if (Args.hasArg(options::OPT_shared))
+    CmdArgs.push_back("-shared");
+
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+    if (!Args.hasArg(options::OPT_shared))
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
+    /*CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
+
+    const char *crtbegin;
+    if (IsStatic)
+      crtbegin = "crtbeginT.o";
+    else if (Args.hasArg(options::OPT_shared))
+      crtbegin = "crtbeginS.o";
+    else
+      crtbegin = "crtbegin.o";
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));*/
+  }
+
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.AddAllArgs(CmdArgs, options::OPT_u);
+
+  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
+
+  if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
+    CmdArgs.push_back("--no-demangle");
+
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs);
+
+  if (D.CCCIsCXX() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    bool OnlyLibstdcxxStatic =
+        Args.hasArg(options::OPT_static_libstdcxx) && !IsStatic;
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bstatic");
+    ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bdynamic");
+    CmdArgs.push_back("-lm");
+  }
+
+  if (!Args.hasArg(options::OPT_nostdlib)) {
+    if (!Args.hasArg(options::OPT_nodefaultlibs)) {
+      // Always use groups, since it has no effect on dynamic libraries.
+      CmdArgs.push_back("--start-group");
+      CmdArgs.push_back("-lc");
+      // Avery's libc++ currently requires libpthread, so just always include it
+      // in the group for C++.
+      if (Args.hasArg(options::OPT_pthread) ||
+          Args.hasArg(options::OPT_pthreads) || D.CCCIsCXX()) {
+        CmdArgs.push_back("-lpthread");
+      }
+
+      CmdArgs.push_back("-lnosys");
+      CmdArgs.push_back("-lcompiler_rt");
+
+      /*
+      CmdArgs.push_back("--as-needed");
+      if (IsStatic)
+        CmdArgs.push_back("-lgcc_eh");
+      else
+        CmdArgs.push_back("-lgcc_s");
+      CmdArgs.push_back("--no-as-needed");*/
+
+      CmdArgs.push_back("--end-group");
+    }
+/*
+    if (!Args.hasArg(options::OPT_nostartfiles)) {
+      const char *crtend;
+      if (Args.hasArg(options::OPT_shared))
+        crtend = "crtendS.o";
+      else
+        crtend = "crtend.o";
+
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
+    }*/
+  }
+
+  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
+  C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+}
+
 // NaCl ARM assembly (inline or standalone) can be written with a set of macros
 // for the various SFI requirements like register masking. The assembly tool
 // inserts the file containing the macros as an input into all the assembly

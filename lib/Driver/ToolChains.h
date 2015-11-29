@@ -903,6 +903,30 @@ public:
   bool IsIntegratedAssemblerDefault() const override { return true; }
 };
 
+class LLVM_LIBRARY_VISIBILITY Avery : public Generic_ELF {
+public:
+  Avery(const Driver &D, const llvm::Triple &Triple,
+                const llvm::opt::ArgList &Args);
+
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
+  CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+
+  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const override;
+
+  std::string SysRoot;
+
+protected:
+  Tool *buildLinker() const override;
+  Tool *buildAssembler() const override;
+};
+
 class LLVM_LIBRARY_VISIBILITY NaClToolChain : public Generic_ELF {
 public:
   NaClToolChain(const Driver &D, const llvm::Triple &Triple,

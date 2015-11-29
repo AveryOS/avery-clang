@@ -2736,6 +2736,93 @@ Tool *AMDGPUToolChain::buildLinker() const {
 }
 // End AMDGPU
 
+/// Avery Toolchain
+Avery::Avery(const Driver &D, const llvm::Triple &Triple,
+             const ArgList &Args)
+    : Generic_ELF(D, Triple, Args) {
+
+  // Remove paths added by Generic_GCC. NaCl Toolchain cannot use the
+  // default paths, and must instead only use the paths provided
+  // with this toolchain based on architecture.
+  path_list &file_paths = getFilePaths();
+  path_list &prog_paths = getProgramPaths();
+
+  file_paths.clear();
+  prog_paths.clear();
+
+  std::string FilePath(getDriver().Dir + "/../../../");
+
+  SysRoot = FilePath + "avery-sysroot";
+
+  switch (Triple.getArch()) {
+  case llvm::Triple::x86_64:
+    file_paths.push_back(SysRoot + "/lib");
+    prog_paths.push_back(FilePath + "binutils/install/x86_64-pc-avery/bin");
+    break;
+  default:
+    break;
+  }
+}
+
+void Avery::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                      ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    addSystemInclude(DriverArgs, CC1Args, P.str());
+  }
+
+  if (!DriverArgs.hasArg(options::OPT_nostdlibinc))
+    addSystemInclude(DriverArgs, CC1Args, SysRoot + "/include");
+}
+
+void Avery::AddCXXStdlibLibArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  // Check for -stdlib= flags. We only support libc++ but this consumes the arg
+  // if the value is libc++, and emits an error for other values.
+  GetCXXStdlibType(Args);
+  CmdArgs.push_back("-lc++");
+}
+
+void Avery::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                         ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  // Check for -stdlib= flags. We only support libc++ but this consumes the arg
+  // if the value is libc++, and emits an error for other values.
+  GetCXXStdlibType(DriverArgs);
+
+  addSystemInclude(DriverArgs, CC1Args, SysRoot + "/include/c++/v1");
+}
+
+ToolChain::CXXStdlibType
+Avery::GetCXXStdlibType(const ArgList &Args) const {
+  if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value == "libc++")
+      return ToolChain::CST_Libcxx;
+    getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
+  }
+
+  return ToolChain::CST_Libcxx;
+}
+
+Tool *Avery::buildLinker() const {
+  return new tools::averytools::Linker(*this);
+}
+
+Tool *Avery::buildAssembler() const {
+  return new tools::gnutools::Assembler(*this);
+}
+// End Avery
+
 /// NaCl Toolchain
 NaClToolChain::NaClToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)

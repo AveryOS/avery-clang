@@ -2243,6 +2243,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       else
         TC = new toolchains::Linux(*this, Target, Args);
       break;
+    case llvm::Triple::Avery:
+      TC = new toolchains::Avery(*this, Target, Args);
+      break;
     case llvm::Triple::NaCl:
       TC = new toolchains::NaClToolChain(*this, Target, Args);
       break;
