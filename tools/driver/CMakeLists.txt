@@ -66,7 +66,7 @@ endif()
 if(NOT CLANG_LINKS_TO_CREATE)
   set(CLANG_LINKS_TO_CREATE clang++ clang-cl)
 
-  if (WIN32)
+  if (MSVC)
     list(APPEND CLANG_LINKS_TO_CREATE ../msbuild-bin/cl)
   endif()
 endif()
