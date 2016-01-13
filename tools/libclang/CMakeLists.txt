@@ -51,9 +51,11 @@ if (CLANG_ENABLE_ARCMT)
   list(APPEND LIBS clangARCMigrate)
 endif ()
 
+if (NOT MINGW)
 find_library(DL_LIBRARY_PATH dl)
 if (DL_LIBRARY_PATH)
   list(APPEND LIBS dl)
+endif()
 endif()
 
 option(LIBCLANG_BUILD_STATIC
