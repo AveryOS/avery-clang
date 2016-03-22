@@ -714,10 +714,6 @@ protected:
                     MacroBuilder &Builder) const override {
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__AVERY__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
   }
 
 public:
@@ -4651,7 +4647,7 @@ public:
       } else if (Feature == "+dsp") {
         DSP = 1;
       } else if (Feature == "+fp-only-sp") {
-        HW_FP_remove |= HW_FP_DP; 
+        HW_FP_remove |= HW_FP_DP;
       } else if (Feature == "+strict-align") {
         Unaligned = 0;
       } else if (Feature == "+fp16") {
