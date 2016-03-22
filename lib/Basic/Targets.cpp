@@ -771,6 +771,20 @@ public:
   }
 };
 
+template <typename Target>
+class GenericELFTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__ELF__");
+  }
+
+public:
+  GenericELFTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {
+    this->UserLabelPrefix = "";
+  }
+};
+
 // WebAssembly target
 template <typename Target>
 class WebAssemblyOSTargetInfo : public OSTargetInfo<Target> {
@@ -7881,7 +7895,10 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
     case llvm::Triple::ELFIAMCU:
       return new MCUX86_32TargetInfo(Triple);
     default:
-      return new X86_32TargetInfo(Triple);
+      if (Triple.isOSBinFormatELF())
+        return new GenericELFTargetInfo<X86_32TargetInfo>(Triple);
+      else
+        return new X86_32TargetInfo(Triple);
     }
 
   case llvm::Triple::x86_64:
@@ -7931,7 +7948,10 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple) {
     case llvm::Triple::PS4:
       return new PS4OSTargetInfo<X86_64TargetInfo>(Triple);
     default:
-      return new X86_64TargetInfo(Triple);
+      if (Triple.isOSBinFormatELF())
+        return new GenericELFTargetInfo<X86_64TargetInfo>(Triple);
+      else
+        return new X86_64TargetInfo(Triple);
     }
 
   case llvm::Triple::spir: {
