@@ -719,6 +719,7 @@ protected:
 public:
   AveryTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {
     this->UserLabelPrefix = "";
+    this->LongDoubleFormat = &llvm::APFloat::IEEEdouble;
   }
 };
 
