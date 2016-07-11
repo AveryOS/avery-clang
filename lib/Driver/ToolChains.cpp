@@ -2750,14 +2750,14 @@ Avery::Avery(const Driver &D, const llvm::Triple &Triple,
   file_paths.clear();
   prog_paths.clear();
 
-  std::string FilePath(getDriver().Dir + "/../../../");
+  std::string FilePath(getDriver().Dir + "/../../");
 
   SysRoot = FilePath + "avery-sysroot";
 
   switch (Triple.getArch()) {
   case llvm::Triple::x86_64:
     file_paths.push_back(SysRoot + "/lib");
-    prog_paths.push_back(FilePath + "binutils/install/x86_64-pc-avery/bin");
+    prog_paths.push_back(FilePath + "binutils/x86_64-pc-avery/bin");
     break;
   default:
     break;
